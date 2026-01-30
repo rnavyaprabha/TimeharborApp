@@ -9,9 +9,11 @@ import {
   where,
   Timestamp,
   arrayUnion,
+  arrayRemove,
+  deleteDoc,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Team } from '../types';
+import { Team, TeamMember } from '../types';
 
 /**
  * Generate a random 6-character alphanumeric join code
@@ -115,7 +117,33 @@ export const getUserTeams = async (userId: string): Promise<Team[]> => {
     const teams = Array.from(teamsMap.values());
     teams.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-    return teams;
+    const memberIds = Array.from(new Set(teams.flatMap((t) => t.memberIds)));
+    const memberMap = new Map<string, { displayName?: string; email?: string }>();
+
+    await Promise.all(
+      memberIds.map(async (id) => {
+        const snap = await getDoc(doc(db, 'users', id));
+        if (snap.exists()) {
+          const data = snap.data() as any;
+          memberMap.set(id, { displayName: data.displayName, email: data.email });
+        }
+      })
+    );
+
+    return teams.map((team) => {
+      const members: TeamMember[] = team.memberIds.map((id) => {
+        const data = memberMap.get(id);
+        const name = data?.displayName || data?.email || 'Member';
+        return {
+          id,
+          name,
+          email: data?.email,
+          role: id === team.ownerId ? 'Leader' : 'Member',
+          status: 'online',
+        };
+      });
+      return { ...team, members };
+    });
   } catch (error: any) {
     throw new Error(error.message || 'Failed to fetch teams');
   }
@@ -171,4 +199,57 @@ export const joinTeam = async (
   } catch (error: any) {
     throw new Error(error.message || 'Failed to join team');
   }
+};
+
+/**
+ * Update team name
+ */
+export const updateTeamName = async (teamId: string, name: string): Promise<void> => {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error('Team name is required');
+  await updateDoc(doc(db, 'teams', teamId), { name: trimmed });
+};
+
+/**
+ * Delete a team
+ */
+export const deleteTeam = async (teamId: string): Promise<void> => {
+  await deleteDoc(doc(db, 'teams', teamId));
+};
+
+/**
+ * Add a member to a team by email
+ */
+export const addMemberToTeam = async (teamId: string, email: string): Promise<string> => {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) throw new Error('Email is required');
+
+  const userQuery = query(collection(db, 'users'), where('email', '==', normalized));
+  const userSnap = await getDocs(userQuery);
+  if (userSnap.empty) {
+    throw new Error('User not found');
+  }
+
+  const memberDoc = userSnap.docs[0];
+  await updateDoc(doc(db, 'teams', teamId), {
+    memberIds: arrayUnion(memberDoc.id),
+  });
+
+  return memberDoc.id;
+};
+
+/**
+ * Remove a member from a team
+ */
+export const removeMemberFromTeam = async (
+  teamId: string,
+  userIdToRemove: string,
+  ownerId: string
+): Promise<void> => {
+  if (userIdToRemove === ownerId) {
+    throw new Error('Cannot remove the team owner');
+  }
+  await updateDoc(doc(db, 'teams', teamId), {
+    memberIds: arrayRemove(userIdToRemove),
+  });
 };

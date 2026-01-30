@@ -3,6 +3,9 @@ export interface User {
   uid: string;
   email: string;
   displayName: string;
+  role?: string;
+  teamIds?: string[];
+  fcmToken?: string;
   createdAt: Date;
 }
 
@@ -17,12 +20,22 @@ export interface AuthState {
 export interface Ticket {
   id: string;
   title: string;
+  description?: string;
   url?: string;
-  userId: string;
+  priority?: 'Low' | 'Medium' | 'High';
+  userId: string; // creator
+  teamId?: string;
+  assignedTo?: string;
   createdAt: Date;
   updatedAt: Date;
   totalTimeSpent: number; // in seconds
-  status: 'open' | 'in_progress' | 'done';
+  lastTrackedDuration?: number; // in seconds (most recent session)
+  status: 'Open' | 'In Progress' | 'Closed';
+  assignee?: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
 }
 
 // Team type definition
@@ -33,6 +46,15 @@ export interface Team {
   ownerId: string;
   memberIds: string[];
   createdAt: Date;
+  members?: TeamMember[];
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email?: string;
+  role: 'Leader' | 'Member';
+  status?: 'online' | 'offline';
 }
 
 // Time Session type definition
@@ -42,6 +64,8 @@ export interface TimeSession {
   teamId?: string;
   ticketId?: string;
   ticketTitle?: string;
+  ticketStartTime?: Date | null;
+  note?: string;
   startTime: Date;
   endTime: Date | null;
   duration: number; // in seconds

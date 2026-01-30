@@ -36,7 +36,7 @@ export const RecentActivityList: React.FC<RecentActivityListProps> = ({
     });
   };
 
-  const renderSession = ({ item, index }: { item: TimeSession; index: number }) => {
+  const renderSession = ({ item }: { item: TimeSession }) => {
     const isActive = item.status === 'active';
 
     return (
@@ -44,7 +44,7 @@ export const RecentActivityList: React.FC<RecentActivityListProps> = ({
         <View style={[styles.sessionIcon, isActive && styles.sessionIconActive]}>
           <MaterialCommunityIcons
             name="clock-outline"
-            size={18}
+            size={16}
             color={isActive ? colors.success : colors.primary}
           />
         </View>
@@ -59,7 +59,11 @@ export const RecentActivityList: React.FC<RecentActivityListProps> = ({
             )}
           </View>
           <Text style={styles.sessionDescription}>
-            {item.ticketTitle ? `Worked on: ${item.ticketTitle}` : 'No tickets recorded'}
+            {item.note
+              ? item.note
+              : item.ticketTitle
+                ? `Working on: ${item.ticketTitle}`
+                : 'Clocked In'}
           </Text>
           <Text style={styles.sessionTime}>
             {formatDate(item.startTime)}, {formatTime(item.startTime)} -{' '}
@@ -76,7 +80,6 @@ export const RecentActivityList: React.FC<RecentActivityListProps> = ({
     );
   };
 
-  // Combine active session with recent sessions
   const allSessions = activeSession
     ? [activeSession, ...sessions.filter((s) => s.id !== activeSession.id)]
     : sessions;
@@ -91,7 +94,7 @@ export const RecentActivityList: React.FC<RecentActivityListProps> = ({
             <Text style={styles.seeAllText}>See All</Text>
             <MaterialCommunityIcons
               name="chevron-right"
-              size={18}
+              size={16}
               color={colors.primary}
             />
           </TouchableOpacity>
@@ -100,15 +103,7 @@ export const RecentActivityList: React.FC<RecentActivityListProps> = ({
 
       {displaySessions.length === 0 ? (
         <View style={styles.emptyState}>
-          <MaterialCommunityIcons
-            name="clock-outline"
-            size={48}
-            color={colors.textMuted}
-          />
-          <Text style={styles.emptyTitle}>No Activity Yet</Text>
-          <Text style={styles.emptyText}>
-            Clock in to start tracking your work time
-          </Text>
+          <Text style={styles.emptyText}>No recent activity</Text>
         </View>
       ) : (
         <FlatList
@@ -139,6 +134,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
+    fontFamily: typography.fonts.bold,
     color: colors.textPrimary,
   },
   seeAllButton: {
@@ -149,25 +145,26 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.primary,
     fontWeight: typography.weights.medium,
+    fontFamily: typography.fonts.medium,
   },
   sessionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     backgroundColor: colors.surfaceSecondary,
     borderRadius: borderRadius.xl,
     marginBottom: spacing.md,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   sessionRowActive: {
-    backgroundColor: colors.successLight,
-    borderRadius: borderRadius.xl,
-    ...shadows.sm,
+    backgroundColor: '#DCFCE7',
+    borderColor: '#BBF7D0',
   },
   sessionIcon: {
-    width: 36,
-    height: 36,
+    width: 30,
+    height: 30,
     borderRadius: borderRadius.full,
     backgroundColor: colors.infoLight,
     alignItems: 'center',
@@ -175,7 +172,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   sessionIconActive: {
-    backgroundColor: colors.surface,
+    backgroundColor: '#DCFCE7',
   },
   sessionContent: {
     flex: 1,
@@ -188,43 +185,45 @@ const styles = StyleSheet.create({
   sessionTitle: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
+    fontFamily: typography.fonts.semibold,
     color: colors.textPrimary,
     marginRight: spacing.sm,
   },
   activeBadge: {
-    backgroundColor: colors.success,
+    backgroundColor: '#BBF7D0',
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.full,
   },
   activeBadgeText: {
-    fontSize: typography.sizes.xs,
+    fontSize: 10,
     fontWeight: typography.weights.semibold,
-    color: colors.textOnPrimary,
+    color: '#166534',
   },
   sessionDescription: {
     fontSize: typography.sizes.sm,
     color: colors.textSecondary,
     marginBottom: 2,
+    fontFamily: typography.fonts.medium,
   },
   sessionTime: {
     fontSize: typography.sizes.xs,
     color: colors.textMuted,
+    fontFamily: typography.fonts.medium,
   },
   durationBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.borderLight,
   },
   durationBadgeActive: {
-    backgroundColor: colors.error,
-    borderColor: colors.error,
+    backgroundColor: colors.success,
   },
   durationText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
+    fontFamily: typography.fonts.semibold,
     color: colors.textSecondary,
   },
   durationTextActive: {
@@ -232,18 +231,11 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: spacing.xxxl,
-  },
-  emptyTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.textPrimary,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
+    paddingVertical: spacing.lg,
   },
   emptyText: {
     fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
+    color: colors.textMuted,
+    fontFamily: typography.fonts.medium,
   },
 });

@@ -10,9 +10,11 @@ interface TicketListProps {
   tickets: Ticket[];
   activeTicketId?: string;
   activeTicketElapsedSeconds?: number;
+  trackingEnabled?: boolean;
   onStartTicket: (ticket: Ticket) => void;
   onStopTicket?: (ticket: Ticket) => void;
   onSeeAll?: () => void;
+  onAddTicket?: () => void;
   maxItems?: number;
 }
 
@@ -20,23 +22,25 @@ export const TicketList: React.FC<TicketListProps> = ({
   tickets,
   activeTicketId,
   activeTicketElapsedSeconds = 0,
+  trackingEnabled = true,
   onStartTicket,
   onStopTicket,
   onSeeAll,
+  onAddTicket,
   maxItems = 5,
 }) => {
   const displayTickets = tickets.slice(0, maxItems);
   const openTickets = displayTickets.filter(
-    (t) => t.status === 'open' || t.status === 'in_progress'
+    (t) => t.status === 'Open' || t.status === 'In Progress'
   );
 
   const renderTicket = ({ item }: { item: Ticket }) => {
     const isActive = item.id === activeTicketId;
 
     return (
-      <View style={[styles.ticketRow, isActive && styles.ticketRowActive]}>
+      <View style={styles.ticketRow}>
         <View style={styles.ticketIcon}>
-          <MaterialCommunityIcons name="ticket-outline" size={20} color={colors.primary} />
+          <MaterialCommunityIcons name="ticket-outline" size={18} color={colors.primary} />
         </View>
 
         <View style={styles.ticketContent}>
@@ -44,26 +48,26 @@ export const TicketList: React.FC<TicketListProps> = ({
             {item.title}
           </Text>
           <Text style={styles.ticketMeta}>
-            {item.id.slice(0, 6)} • {formatDuration(item.totalTimeSpent)}
+            {item.id.slice(0, 8)} - {formatDuration(item.lastTrackedDuration ?? 0)}
           </Text>
         </View>
 
         <View style={styles.ticketActions}>
           <TouchableOpacity
-            style={[styles.playButton, isActive && styles.stopButton]}
+            style={[
+              styles.playButton,
+              isActive && styles.stopButton,
+              !trackingEnabled && !isActive && styles.playButtonDisabled,
+            ]}
+            disabled={!trackingEnabled && !isActive}
             onPress={() => (isActive ? onStopTicket?.(item) : onStartTicket(item))}
           >
             <MaterialCommunityIcons
               name={isActive ? 'stop' : 'play'}
-              size={16}
-              color={isActive ? '#EF4444' : colors.primary}
+              size={14}
+              color={isActive ? '#EF4444' : trackingEnabled ? colors.primary : colors.textMuted}
             />
           </TouchableOpacity>
-          <View style={[styles.statusBadge, isActive && styles.statusBadgeActive]}>
-            <Text style={[styles.statusText, isActive && styles.statusTextActive]}>
-              {isActive ? 'Open' : 'Open'}
-            </Text>
-          </View>
           {isActive && (
             <Text style={styles.activeTimer}>{formatTimer(activeTicketElapsedSeconds)}</Text>
           )}
@@ -77,7 +81,7 @@ export const TicketList: React.FC<TicketListProps> = ({
       <View style={styles.header}>
         <Text style={styles.sectionTitle}>Open Tickets</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity style={styles.addButton} onPress={() => onAddTicket?.()}>
             <MaterialCommunityIcons name="plus" size={18} color={colors.textOnPrimary} />
           </TouchableOpacity>
           {onSeeAll && (
@@ -91,7 +95,7 @@ export const TicketList: React.FC<TicketListProps> = ({
 
       {openTickets.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No open tickets</Text>
+          <Text style={styles.emptyText}>No tickets found. Create one to get started!</Text>
         </View>
       ) : (
         <FlatList
@@ -122,6 +126,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
+    fontFamily: typography.fonts.bold,
     color: colors.textPrimary,
   },
   headerActions: {
@@ -145,6 +150,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.primary,
     fontWeight: typography.weights.medium,
+    fontFamily: typography.fonts.medium,
   },
   ticketRow: {
     flexDirection: 'row',
@@ -154,16 +160,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSecondary,
     borderRadius: borderRadius.xl,
     marginBottom: spacing.sm,
-    ...shadows.sm,
-  },
-  ticketRowActive: {
-    backgroundColor: colors.successLight,
-    borderRadius: borderRadius.xl,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   ticketIcon: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: borderRadius.md,
     backgroundColor: colors.infoLight,
     alignItems: 'center',
@@ -176,55 +178,43 @@ const styles = StyleSheet.create({
   ticketTitle: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
+    fontFamily: typography.fonts.semibold,
     color: colors.textPrimary,
     marginBottom: 2,
   },
   ticketMeta: {
     fontSize: typography.sizes.xs,
     color: colors.textSecondary,
+    fontFamily: typography.fonts.medium,
   },
   ticketActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  statusBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  statusBadgeActive: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-  },
-  statusText: {
-    fontSize: typography.sizes.xs,
-    color: colors.textSecondary,
-    fontWeight: typography.weights.medium,
-  },
-  statusTextActive: {
-    color: colors.textSecondary,
-  },
   playButton: {
-    width: 34,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: borderRadius.full,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.infoLight,
+  },
+  playButtonDisabled: {
+    backgroundColor: colors.surfaceSecondary,
+    borderColor: colors.borderLight,
   },
   stopButton: {
-    backgroundColor: '#FFF1F2',
-    borderColor: '#FFE4E6',
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FECACA',
   },
   activeTimer: {
-    fontSize: typography.sizes.xs,
+    fontSize: 10,
     color: colors.error,
     fontWeight: typography.weights.semibold,
+    fontFamily: typography.fonts.semibold,
   },
   emptyState: {
     paddingVertical: spacing.xl,
@@ -233,5 +223,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: typography.sizes.sm,
     color: colors.textMuted,
+    fontFamily: typography.fonts.medium,
   },
 });

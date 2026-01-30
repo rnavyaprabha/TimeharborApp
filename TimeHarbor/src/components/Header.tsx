@@ -15,9 +15,12 @@ import { Alert } from 'react-native';
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  teams?: { id: string; name: string }[];
+  activeTeamId?: string;
+  onSelectTeam?: (teamId?: string) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange }) => {
+export const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, teams = [], activeTeamId, onSelectTeam }) => {
   const user = useAuthStore((state) => state.user);
   const logoutStore = useAuthStore((state) => state.logout);
 
@@ -29,25 +32,44 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange }) => {
   ];
 
   const handleSignOut = async () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-              logoutStore();
-            } catch (error: any) {
-              Alert.alert('Error', error.message);
-            }
+    const confirm = () => {
+      if (Platform.OS === 'web') {
+        return window.confirm('Are you sure you want to sign out?');
+      }
+      return true;
+    };
+
+    const doLogout = async () => {
+      try {
+        await logout();
+        logoutStore();
+      } catch (error: any) {
+        if (Platform.OS === 'web') {
+          window.alert(error.message || 'Failed to sign out');
+        } else {
+          Alert.alert('Error', error.message);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm()) {
+        await doLogout();
+      }
+    } else {
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign Out',
+            style: 'destructive',
+            onPress: doLogout,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const getDisplayName = () => {
@@ -87,6 +109,23 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange }) => {
 
         {/* Right Section - User & Sign Out */}
         <View style={styles.rightSection}>
+          {onSelectTeam && teams.length > 0 && (
+            <TouchableOpacity
+              style={styles.teamPill}
+              onPress={() => {
+                const idx = teams.findIndex((t) => t.id === activeTeamId);
+                const next = teams[(idx + 1 + teams.length) % teams.length];
+                onSelectTeam(next?.id);
+              }}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="account-group" size={16} color={colors.primary} />
+              <Text style={styles.teamPillText}>
+                {teams.find((t) => t.id === activeTeamId)?.name || 'Team'}
+              </Text>
+              <MaterialCommunityIcons name="chevron-down" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
           <View style={styles.userBadge}>
             <MaterialCommunityIcons
               name="swap-horizontal"
@@ -160,6 +199,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  teamPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceSecondary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  teamPillText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.medium,
   },
   userBadge: {
     flexDirection: 'row',

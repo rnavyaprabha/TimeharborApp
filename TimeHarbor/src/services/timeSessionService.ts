@@ -31,6 +31,8 @@ export const clockIn = async (
       teamId: teamId || null,
       ticketId: ticketId || null,
       ticketTitle: ticketTitle || null,
+      ticketStartTime: ticketId ? Timestamp.fromDate(now) : null,
+      note: null,
       startTime: Timestamp.fromDate(now),
       endTime: null,
       duration: 0,
@@ -46,6 +48,8 @@ export const clockIn = async (
       teamId,
       ticketId,
       ticketTitle,
+      ticketStartTime: ticketId ? now : null,
+      note: undefined,
       startTime: now,
       endTime: null,
       duration: 0,
@@ -82,12 +86,19 @@ export const clockOut = async (sessionId: string): Promise<TimeSession> => {
 
     // If there's a ticket associated, update its total time
     if (sessionData.ticketId) {
+      const ticketStart = sessionData.ticketStartTime?.toDate
+        ? sessionData.ticketStartTime.toDate()
+        : null;
+      const ticketDuration = ticketStart
+        ? Math.max(0, Math.floor((now.getTime() - ticketStart.getTime()) / 1000))
+        : duration;
       const ticketRef = doc(db, 'tickets', sessionData.ticketId);
       const ticketSnap = await getDoc(ticketRef);
       if (ticketSnap.exists()) {
         const ticketData = ticketSnap.data();
         await updateDoc(ticketRef, {
-          totalTimeSpent: (ticketData.totalTimeSpent || 0) + duration,
+          totalTimeSpent: (ticketData.totalTimeSpent || 0) + ticketDuration,
+          lastTrackedDuration: ticketDuration,
           updatedAt: Timestamp.fromDate(now),
         });
       }
@@ -99,6 +110,10 @@ export const clockOut = async (sessionId: string): Promise<TimeSession> => {
       teamId: sessionData.teamId,
       ticketId: sessionData.ticketId,
       ticketTitle: sessionData.ticketTitle,
+      ticketStartTime: sessionData.ticketStartTime
+        ? sessionData.ticketStartTime.toDate()
+        : null,
+      note: sessionData.note,
       startTime,
       endTime: now,
       duration,
@@ -137,6 +152,8 @@ export const getActiveSession = async (userId: string): Promise<TimeSession | nu
       teamId: data.teamId,
       ticketId: data.ticketId,
       ticketTitle: data.ticketTitle,
+      ticketStartTime: data.ticketStartTime ? data.ticketStartTime.toDate() : null,
+      note: data.note,
       startTime: data.startTime.toDate(),
       endTime: null,
       duration: 0,
@@ -154,31 +171,38 @@ export const getActiveSession = async (userId: string): Promise<TimeSession | nu
  */
 export const getRecentSessions = async (
   userId: string,
-  limitCount: number = 10
+  limitCount: number = 10,
+  teamId?: string
 ): Promise<TimeSession[]> => {
   try {
     // To avoid composite index requirements, fetch by userId and sort client-side
     const q = query(collection(db, 'timeSessions'), where('userId', '==', userId));
     const snapshot = await getDocs(q);
-    const sessions: TimeSession[] = [];
+    let sessions: TimeSession[] = [];
 
     snapshot.forEach((doc) => {
       const data = doc.data();
-      sessions.push({
-        id: doc.id,
-        userId: data.userId,
-        teamId: data.teamId,
-        ticketId: data.ticketId,
-        ticketTitle: data.ticketTitle,
-        startTime: data.startTime.toDate(),
-        endTime: data.endTime ? data.endTime.toDate() : null,
-        duration: data.duration || 0,
-        status: data.status,
-        createdAt: data.createdAt.toDate(),
-      });
+    sessions.push({
+      id: doc.id,
+      userId: data.userId,
+      teamId: data.teamId,
+      ticketId: data.ticketId,
+      ticketTitle: data.ticketTitle,
+      ticketStartTime: data.ticketStartTime ? data.ticketStartTime.toDate() : null,
+      note: data.note,
+      startTime: data.startTime.toDate(),
+      endTime: data.endTime ? data.endTime.toDate() : null,
+      duration: data.duration || 0,
+      status: data.status,
+      createdAt: data.createdAt.toDate(),
+    });
     });
 
     // Sort by startTime desc then createdAt desc
+    if (teamId) {
+      sessions = sessions.filter((s) => s.teamId === teamId);
+    }
+
     sessions.sort((a, b) => {
       const aStart = a.startTime?.getTime() || 0;
       const bStart = b.startTime?.getTime() || 0;
@@ -197,7 +221,8 @@ export const getRecentSessions = async (
  */
 export const getDashboardStats = async (
   userId: string,
-  teams: { memberIds: string[] }[]
+  teams: { id?: string; memberIds: string[] }[],
+  teamId?: string
 ): Promise<DashboardStats> => {
   try {
     const now = new Date();
@@ -236,21 +261,22 @@ export const getDashboardStats = async (
     // Get open tickets count
     const ticketsQuery = query(
       collection(db, 'tickets'),
-      where('userId', '==', userId),
-      where('status', 'in', ['open', 'in_progress'])
+      where('assignedTo', '==', userId),
+      where('status', 'in', ['Open', 'In Progress'])
     );
 
     const [ticketsSnap] = await Promise.all([getDocs(ticketsQuery)]);
 
-    // Calculate today's hours
+    // Calculate today's/week's hours
     let todaySeconds = 0;
-    // Calculate week's hours
     let weekSeconds = 0;
 
     sessionsSnap.forEach((doc) => {
       const data = doc.data();
       const start = getStart(data);
       if (!start) return;
+
+      if (teamId && data.teamId && data.teamId !== teamId) return;
 
       const duration = computeDuration(data, now);
 
@@ -264,14 +290,23 @@ export const getDashboardStats = async (
 
     // Count team members
     let teamMembers = 0;
-    teams.forEach((team) => {
-      teamMembers += team.memberIds.length;
-    });
+    if (teamId) {
+      const team = teams.find((t) => t.id === teamId);
+      if (team) {
+        teamMembers = team.memberIds.length;
+      }
+    } else {
+      teams.forEach((team) => {
+        teamMembers += team.memberIds.length;
+      });
+    }
 
     return {
       todayHours: todaySeconds,
       weekHours: weekSeconds,
-      openTickets: ticketsSnap.size,
+      openTickets: teamId
+        ? ticketsSnap.docs.filter((d) => d.data().teamId === teamId).length
+        : ticketsSnap.size,
       teamMembers: teamMembers || 1, // At least count the user
     };
   } catch (error: any) {
@@ -298,6 +333,150 @@ export const updateSessionTicket = async (
     await updateDoc(sessionRef, {
       ticketId: ticketId ?? null,
       ticketTitle: ticketTitle ?? null,
+    });
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to update session');
+  }
+};
+
+export const startTicketTracking = async (
+  sessionId: string,
+  ticketId: string,
+  ticketTitle: string
+): Promise<void> => {
+  try {
+    const now = new Date();
+    const sessionRef = doc(db, 'timeSessions', sessionId);
+    await updateDoc(sessionRef, {
+      ticketId,
+      ticketTitle,
+      ticketStartTime: Timestamp.fromDate(now),
+    });
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to start ticket tracking');
+  }
+};
+
+export const stopTicketTracking = async (
+  sessionId: string
+): Promise<{ ticketId: string; duration: number } | null> => {
+  try {
+    const sessionRef = doc(db, 'timeSessions', sessionId);
+    const sessionSnap = await getDoc(sessionRef);
+    if (!sessionSnap.exists()) return null;
+
+    const sessionData = sessionSnap.data();
+    const ticketId = sessionData.ticketId as string | null;
+    const ticketStart = sessionData.ticketStartTime?.toDate
+      ? sessionData.ticketStartTime.toDate()
+      : null;
+
+    if (!ticketId || !ticketStart) {
+      await updateDoc(sessionRef, {
+        ticketId: null,
+        ticketTitle: null,
+        ticketStartTime: null,
+      });
+      return null;
+    }
+
+    const now = new Date();
+    const duration = Math.max(0, Math.floor((now.getTime() - ticketStart.getTime()) / 1000));
+
+    const ticketRef = doc(db, 'tickets', ticketId);
+    const ticketSnap = await getDoc(ticketRef);
+    if (ticketSnap.exists()) {
+      const ticketData = ticketSnap.data();
+      await updateDoc(ticketRef, {
+        totalTimeSpent: (ticketData.totalTimeSpent || 0) + duration,
+        lastTrackedDuration: duration,
+        updatedAt: Timestamp.fromDate(now),
+      });
+    }
+
+    await updateDoc(sessionRef, {
+      ticketId: null,
+      ticketTitle: null,
+      ticketStartTime: null,
+    });
+
+    return { ticketId, duration };
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to stop ticket tracking');
+  }
+};
+
+/**
+ * Get recent sessions for a team (client-side sorted)
+ */
+export const getTeamSessions = async (
+  teamId: string,
+  limitCount: number = 50
+): Promise<TimeSession[]> => {
+  try {
+    const q = query(collection(db, 'timeSessions'), where('teamId', '==', teamId));
+    const snapshot = await getDocs(q);
+    let sessions: TimeSession[] = [];
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      sessions.push({
+        id: docSnap.id,
+        userId: data.userId,
+        teamId: data.teamId,
+      ticketId: data.ticketId,
+      ticketTitle: data.ticketTitle,
+      ticketStartTime: data.ticketStartTime ? data.ticketStartTime.toDate() : null,
+      note: data.note,
+      startTime: data.startTime.toDate(),
+      endTime: data.endTime ? data.endTime.toDate() : null,
+      duration: data.duration || 0,
+      status: data.status,
+      createdAt: data.createdAt.toDate(),
+      });
+    });
+
+    sessions.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+    return sessions.slice(0, limitCount);
+  } catch (error: any) {
+    console.error('Error getting team sessions:', error);
+    return [];
+  }
+};
+
+/**
+ * Update active session note/comment
+ */
+export const updateSessionNote = async (
+  sessionId: string,
+  note?: string
+): Promise<void> => {
+  try {
+    const sessionRef = doc(db, 'timeSessions', sessionId);
+    await updateDoc(sessionRef, {
+      note: note ?? null,
+    });
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to update session note');
+  }
+};
+
+export const updateSessionTimes = async (
+  sessionId: string,
+  startTime: Date,
+  endTime: Date | null,
+  status?: 'active' | 'completed'
+): Promise<void> => {
+  try {
+    const sessionRef = doc(db, 'timeSessions', sessionId);
+    const resolvedStatus = status ?? (endTime ? 'completed' : 'active');
+    const safeEnd = endTime && endTime.getTime() >= startTime.getTime() ? endTime : null;
+    const duration = safeEnd ? Math.max(0, Math.floor((safeEnd.getTime() - startTime.getTime()) / 1000)) : 0;
+    await updateDoc(sessionRef, {
+      startTime: Timestamp.fromDate(startTime),
+      endTime: safeEnd ? Timestamp.fromDate(safeEnd) : null,
+      duration,
+      status: resolvedStatus,
     });
   } catch (error: any) {
     throw new Error(error.message || 'Failed to update session');

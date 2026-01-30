@@ -4,47 +4,70 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  Text,
   Platform,
   Alert,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '../store/authStore';
-import { getUserTeams } from '../services/teamService';
 import { getUserTickets } from '../services/ticketService';
 import {
   clockIn,
-  clockOut,
   getActiveSession,
   getRecentSessions,
   getDashboardStats,
-  updateSessionTicket,
+  startTicketTracking,
+  stopTicketTracking,
 } from '../services/timeSessionService';
-import { colors, spacing } from '../theme';
-import { TimeSession, Ticket, DashboardStats as DashboardStatsType, Team } from '../types';
+import { colors, spacing, borderRadius, typography, shadows } from '../theme';
+import { TimeSession, Ticket, DashboardStats as DashboardStatsType } from '../types';
 
 // Import components
-import { ClockInButton } from '../components/ClockInButton';
-import { ActiveSessionCard } from '../components/ActiveSessionCard';
 import { DashboardStats } from '../components/DashboardStats';
 import { TicketList } from '../components/TicketList';
 import { RecentActivityList } from '../components/RecentActivityList';
+import { useTeamUiStore } from '../store/teamUiStore';
+import { useSessionStore } from '../store/sessionStore';
 
-export const HomeScreen: React.FC = () => {
+interface HomeScreenProps {
+  onOpenActivity?: () => void;
+  onOpenAddTicket?: () => void;
+  onOpenTickets?: () => void;
+}
+
+export const HomeScreen: React.FC<HomeScreenProps> = ({
+  onOpenActivity,
+  onOpenAddTicket,
+  onOpenTickets,
+}) => {
   const user = useAuthStore((state) => state.user);
   
   // State
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeSession, setActiveSession] = useState<TimeSession | null>(null);
   const [recentSessions, setRecentSessions] = useState<TimeSession[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const { teams, activeTeamId } = useTeamUiStore();
+  const {
+    activeSession,
+    lastCompletedSession,
+    setActiveSession,
+    setLastCompletedSession,
+  } = useSessionStore();
   const [stats, setStats] = useState<DashboardStatsType>({
     todayHours: 0,
     weekHours: 0,
     openTickets: 0,
     teamMembers: 1,
   });
+  const statsRef = useRef<DashboardStatsType>({
+    todayHours: 0,
+    weekHours: 0,
+    openTickets: 0,
+    teamMembers: 1,
+  });
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [activeTicketElapsedSeconds, setActiveTicketElapsedSeconds] = useState(0);
   const [activeTicketId, setActiveTicketId] = useState<string | undefined>();
 
   // Timer ref
@@ -58,14 +81,12 @@ export const HomeScreen: React.FC = () => {
     if (!user) return;
 
     try {
-      const [userTeams, userTickets, session, sessions] = await Promise.all([
-        getUserTeams(user.uid),
-        getUserTickets(user.uid),
+      const [userTickets, session, sessions] = await Promise.all([
+        getUserTickets(user.uid, activeTeamId),
         getActiveSession(user.uid),
-        getRecentSessions(user.uid, 10),
+        getRecentSessions(user.uid, 10, activeTeamId),
       ]);
 
-      setTeams(userTeams);
       setTickets(userTickets);
       setActiveSession(session);
       setRecentSessions(sessions.filter((s) => s.status === 'completed'));
@@ -78,7 +99,7 @@ export const HomeScreen: React.FC = () => {
       }
 
       // Get dashboard stats
-      const dashStats = await getDashboardStats(user.uid, userTeams);
+      const dashStats = await getDashboardStats(user.uid, teams, activeTeamId);
       setStats(dashStats);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -86,11 +107,15 @@ export const HomeScreen: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user]);
+  }, [user, activeTeamId, teams, setActiveSession]);
 
   /**
    * Start timer when active session exists
    */
+  useEffect(() => {
+    statsRef.current = stats;
+  }, [stats]);
+
   useEffect(() => {
     if (activeSession) {
       // Clear any existing timer
@@ -102,6 +127,14 @@ export const HomeScreen: React.FC = () => {
       timerRef.current = setInterval(() => {
         const elapsed = Math.floor((Date.now() - activeSession.startTime.getTime()) / 1000);
         setElapsedSeconds(elapsed);
+        if (activeSession.ticketStartTime) {
+          const ticketElapsed = Math.floor(
+            (Date.now() - activeSession.ticketStartTime.getTime()) / 1000
+          );
+          setActiveTicketElapsedSeconds(ticketElapsed);
+        } else {
+          setActiveTicketElapsedSeconds(0);
+        }
       }, 1000);
     } else {
       // Clear timer when no active session
@@ -110,6 +143,7 @@ export const HomeScreen: React.FC = () => {
         timerRef.current = null;
       }
       setElapsedSeconds(0);
+      setActiveTicketElapsedSeconds(0);
     }
 
     // Cleanup on unmount
@@ -127,6 +161,60 @@ export const HomeScreen: React.FC = () => {
     loadData();
   }, [loadData]);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  useEffect(() => {
+    if (!activeSession) {
+      setActiveTicketId(undefined);
+      return;
+    }
+    setActiveTicketId(activeSession.ticketId || undefined);
+    if (activeSession.ticketStartTime) {
+      setActiveTicketElapsedSeconds(
+        Math.floor((Date.now() - activeSession.ticketStartTime.getTime()) / 1000)
+      );
+    } else {
+      setActiveTicketElapsedSeconds(0);
+    }
+  }, [activeSession]);
+
+  useEffect(() => {
+    if (!lastCompletedSession) return;
+    setRecentSessions((prev) => {
+      const filtered = prev.filter((s) => s.id !== lastCompletedSession.id);
+      return [lastCompletedSession, ...filtered];
+    });
+    if (user) {
+      setStats((prev) => {
+        const next = {
+          ...prev,
+          todayHours: prev.todayHours + lastCompletedSession.duration,
+          weekHours: prev.weekHours + lastCompletedSession.duration,
+        };
+        statsRef.current = next;
+        return next;
+      });
+      setTimeout(() => {
+        getDashboardStats(user.uid, teams, activeTeamId)
+          .then((fresh) => {
+            setStats((prev) => {
+              if (fresh.todayHours < prev.todayHours || fresh.weekHours < prev.weekHours) {
+                return prev;
+              }
+              statsRef.current = fresh;
+              return fresh;
+            });
+          })
+          .catch(() => {});
+      }, 1200);
+    }
+    setLastCompletedSession(null);
+  }, [lastCompletedSession, setLastCompletedSession, user, teams, activeTeamId]);
+
   /**
    * Handle refresh
    */
@@ -136,95 +224,89 @@ export const HomeScreen: React.FC = () => {
   };
 
   /**
-   * Handle clock in/out
-   */
-  const handleClockInOut = async () => {
-    if (!user) return;
-
-    try {
-      if (activeSession) {
-        // Clock out
-        const completedSession = await clockOut(activeSession.id);
-        setActiveSession(null);
-        setActiveTicketId(undefined);
-        setElapsedSeconds(0);
-        
-        // Add to recent sessions
-        setRecentSessions((prev) => [completedSession, ...prev]);
-
-        // Optimistically update stats locally so UI reflects immediately
-        setStats((prev) => ({
-          ...prev,
-          todayHours: prev.todayHours + completedSession.duration,
-          weekHours: prev.weekHours + completedSession.duration,
-        }));
-        
-        // Refresh stats
-        const dashStats = await getDashboardStats(user.uid, teams);
-        setStats(dashStats);
-
-        // Show confirmation
-        if (Platform.OS === 'web') {
-          // Don't show alert on web, just update UI
-        } else {
-          Alert.alert('Clocked Out', 'Your session has been saved.');
-        }
-      } else {
-        // Clock in
-        const teamId = teams.length > 0 ? teams[0].id : undefined;
-        const newSession = await clockIn(user.uid, undefined, undefined, teamId);
-        setActiveSession(newSession);
-        
-        // Refresh stats
-        const dashStats = await getDashboardStats(user.uid, teams);
-        setStats(dashStats);
-      }
-    } catch (error: any) {
-      console.error('Clock in/out error:', error);
-      if (Platform.OS === 'web') {
-        window.alert(error.message || 'Failed to clock in/out');
-      } else {
-        Alert.alert('Error', error.message || 'Failed to clock in/out');
-      }
-    }
-  };
-
-  /**
    * Handle starting work on a ticket
    */
   const handleStartTicket = async (ticket: Ticket) => {
     if (!user) return;
 
     try {
+      if (!activeSession) {
+        const message = 'Clock in first to start tracking a ticket.';
+        if (Platform.OS === 'web') {
+          window.alert(message);
+        } else {
+          Alert.alert('Clock in required', message);
+        }
+        return;
+      }
       if (activeSession) {
         // If same ticket is active -> stop tracking that ticket
         if (activeTicketId === ticket.id) {
-          await updateSessionTicket(activeSession.id, undefined, undefined);
+          const stopped = await stopTicketTracking(activeSession.id);
           setActiveSession({
             ...activeSession,
             ticketId: undefined,
             ticketTitle: undefined,
+            ticketStartTime: null,
           });
           setActiveTicketId(undefined);
+          if (stopped?.ticketId) {
+            setTickets((prev) =>
+              prev.map((t) =>
+                t.id === stopped.ticketId
+                  ? {
+                      ...t,
+                      totalTimeSpent: t.totalTimeSpent + stopped.duration,
+                      lastTrackedDuration: stopped.duration,
+                    }
+                  : t
+              )
+            );
+          }
         } else {
           // Switch to this ticket within the same session
-          await updateSessionTicket(activeSession.id, ticket.id, ticket.title);
+          const stopped = await stopTicketTracking(activeSession.id);
+          await startTicketTracking(activeSession.id, ticket.id, ticket.title);
           setActiveSession({
             ...activeSession,
             ticketId: ticket.id,
             ticketTitle: ticket.title,
+            ticketStartTime: new Date(),
           });
           setActiveTicketId(ticket.id);
+          setTickets((prev) =>
+            prev.map((t) =>
+              t.id === ticket.id ? { ...t, lastTrackedDuration: 0 } : t
+            )
+          );
+          if (stopped?.ticketId) {
+            setTickets((prev) =>
+              prev.map((t) =>
+                t.id === stopped.ticketId
+                  ? {
+                      ...t,
+                      totalTimeSpent: t.totalTimeSpent + stopped.duration,
+                      lastTrackedDuration: stopped.duration,
+                    }
+                  : t
+              )
+            );
+          }
         }
       } else {
         // Start new session with ticket
-        const teamId = teams.length > 0 ? teams[0].id : undefined;
+        const teamId = activeTeamId || (teams.length > 0 ? teams[0].id : undefined);
         const newSession = await clockIn(user.uid, ticket.id, ticket.title, teamId);
         setActiveSession(newSession);
         setActiveTicketId(ticket.id);
+        setTickets((prev) =>
+          prev.map((t) =>
+            t.id === ticket.id ? { ...t, lastTrackedDuration: 0 } : t
+          )
+        );
         
         // Refresh stats
-        const dashStats = await getDashboardStats(user.uid, teams);
+        const dashStats = await getDashboardStats(user.uid, teams, activeTeamId);
         setStats(dashStats);
       }
     } catch (error: any) {
@@ -251,8 +333,9 @@ export const HomeScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.contentWidth, { maxWidth: contentMaxWidth }]}>
-          {/* Dashboard Stats */}
-          <View style={styles.sectionMargin}>
+          {/* Dashboard Overview */}
+          <View style={styles.dashboardCard}>
+            <Text style={styles.dashboardTitle}>Dashboard Overview</Text>
             <DashboardStats stats={stats} />
           </View>
 
@@ -261,10 +344,12 @@ export const HomeScreen: React.FC = () => {
             <TicketList
               tickets={tickets}
               activeTicketId={activeTicketId}
-              activeTicketElapsedSeconds={elapsedSeconds}
+              activeTicketElapsedSeconds={activeTicketElapsedSeconds}
+              trackingEnabled={!!activeSession}
               onStartTicket={handleStartTicket}
               onStopTicket={handleStartTicket}
-              onSeeAll={() => {}}
+              onAddTicket={onOpenAddTicket}
+              onSeeAll={onOpenTickets}
             />
           </View>
 
@@ -274,7 +359,7 @@ export const HomeScreen: React.FC = () => {
               sessions={recentSessions}
               activeSession={activeSession}
               elapsedSeconds={elapsedSeconds}
-              onSeeAll={() => {}}
+              onSeeAll={onOpenActivity}
             />
           </View>
 
@@ -283,13 +368,6 @@ export const HomeScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Clock In/Out Button */}
-      <ClockInButton
-        isActive={!!activeSession}
-        elapsedSeconds={elapsedSeconds}
-        onPress={handleClockInOut}
-        disabled={loading}
-      />
     </View>
   );
 };
@@ -301,8 +379,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: Platform.OS === 'ios' ? spacing.xxxl + 40 : spacing.xl,
-    paddingBottom: 120, // Space for clock button
+    paddingTop: spacing.lg,
+    paddingBottom: 40,
     alignItems: 'center',
   },
   contentWidth: {
@@ -311,7 +389,21 @@ const styles = StyleSheet.create({
   sectionMargin: {
     marginBottom: spacing.lg,
   },
+  dashboardCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
+    ...shadows.sm,
+  },
+  dashboardTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    fontFamily: typography.fonts.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
+  },
   bottomSpacer: {
-    height: 20,
+    height: 0,
   },
 });

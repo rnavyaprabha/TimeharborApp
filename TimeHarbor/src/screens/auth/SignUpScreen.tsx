@@ -27,6 +27,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -70,13 +71,14 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
     }
 
     setLoading(true);
+    setError(null);
 
     try {
       const user = await signUp(email.trim().toLowerCase(), password, displayName.trim());
       setUser(user);
       Alert.alert('Success', 'Account created successfully!');
     } catch (error: any) {
-      Alert.alert('Sign Up Failed', error.message);
+      setError(error.message || 'Sign Up Failed');
     } finally {
       setLoading(false);
     }
@@ -93,6 +95,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.contentWidth}>
           {/* Logo Section */}
           <View style={styles.logoSection}>
             <Text style={styles.logo}>TimeHarbor</Text>
@@ -101,6 +104,11 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
 
           {/* Form Card */}
           <View style={styles.card}>
+            {error && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
             {/* Full Name Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Full Name</Text>
@@ -201,6 +209,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
               </TouchableOpacity>
             </View>
           </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -220,6 +229,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xxxl,
+    alignItems: 'center',
+  },
+  contentWidth: {
+    width: '100%',
+    maxWidth: 520,
   },
   logoSection: {
     alignItems: 'center',
@@ -240,6 +254,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
     padding: spacing.xxl,
+    width: '100%',
     ...shadows.lg,
   },
   inputGroup: {
@@ -306,6 +321,16 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
     color: colors.textOnPrimary,
+  },
+  errorBanner: {
+    backgroundColor: colors.errorLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: typography.sizes.sm,
   },
   footer: {
     flexDirection: 'row',

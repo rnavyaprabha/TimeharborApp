@@ -19,14 +19,16 @@ import { colors, spacing, borderRadius, typography, shadows } from '../../theme'
 
 interface LoginScreenProps {
   onNavigateToSignUp: () => void;
+  onNavigateToForgot: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToSignUp }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToSignUp, onNavigateToForgot }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -42,19 +44,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToSignUp }) 
     }
 
     setLoading(true);
+    setError(null);
 
     try {
       const user = await signIn(email.trim().toLowerCase(), password);
       setUser(user);
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message);
+      setError(error.message || 'Login Failed');
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotPassword = () => {
-    Alert.alert('Forgot Password', 'Password reset functionality coming soon!');
+    onNavigateToForgot();
   };
 
   return (
@@ -68,6 +71,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToSignUp }) 
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.contentWidth}>
           {/* Logo Section */}
           <View style={styles.logoSection}>
             <Text style={styles.logo}>TimeHarbor</Text>
@@ -76,6 +80,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToSignUp }) 
 
           {/* Form Card */}
           <View style={styles.card}>
+            {error && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
             {/* Email Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
@@ -159,6 +168,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToSignUp }) 
               </TouchableOpacity>
             </View>
           </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -178,6 +188,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xxxl,
+    alignItems: 'center',
+  },
+  contentWidth: {
+    width: '100%',
+    maxWidth: 520,
   },
   logoSection: {
     alignItems: 'center',
@@ -198,6 +213,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
     padding: spacing.xxl,
+    width: '100%',
     ...shadows.lg,
   },
   inputGroup: {
@@ -286,6 +302,16 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
     color: colors.textOnPrimary,
+  },
+  errorBanner: {
+    backgroundColor: colors.errorLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: typography.sizes.sm,
   },
   footer: {
     flexDirection: 'row',

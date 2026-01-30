@@ -1,7 +1,7 @@
 // TimeHarbor Design System
 // Modern, clean UI inspired by the reference design
 
-export const colors = {
+export const lightColors = {
   // Primary colors
   primary: '#2563EB',
   primaryDark: '#1D4ED8',
@@ -53,6 +53,51 @@ export const colors = {
   avatarPink: '#EC4899',
 };
 
+export const darkColors = {
+  primary: '#60A5FA',
+  primaryDark: '#3B82F6',
+  primaryLight: '#93C5FD',
+
+  backgroundStart: '#0F172A',
+  backgroundEnd: '#111827',
+  backgroundAlt: '#0B1220',
+
+  surface: '#111827',
+  surfaceSecondary: '#0B1220',
+
+  textPrimary: '#F9FAFB',
+  textSecondary: '#CBD5E1',
+  textMuted: '#94A3B8',
+  textOnPrimary: '#0B1220',
+
+  border: '#1F2937',
+  borderLight: '#1F2937',
+  borderFocus: '#60A5FA',
+
+  success: '#22C55E',
+  successLight: '#064E3B',
+  warning: '#F59E0B',
+  warningLight: '#7C2D12',
+  error: '#EF4444',
+  errorLight: '#7F1D1D',
+  info: '#3B82F6',
+  infoLight: '#1E293B',
+
+  leaderBadge: '#10B981',
+  memberBadge: '#8B5CF6',
+
+  cardJoinTeam: '#0F172A',
+  cardCreateTeam: '#111827',
+
+  avatarPurple: '#A78BFA',
+  avatarBlue: '#60A5FA',
+  avatarGreen: '#34D399',
+  avatarOrange: '#FBBF24',
+  avatarPink: '#F472B6',
+};
+
+export const colors = lightColors;
+
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -90,6 +135,12 @@ export const typography = {
     medium: '500' as const,
     semibold: '600' as const,
     bold: '700' as const,
+  },
+  fonts: {
+    regular: 'Geist_400Regular',
+    medium: 'Geist_500Medium',
+    semibold: 'Geist_600SemiBold',
+    bold: 'Geist_700Bold',
   },
 };
 
@@ -155,6 +206,51 @@ export const paperTheme = {
     },
   },
   roundness: borderRadius.md,
+};
+
+export const getColors = (scheme: 'light' | 'dark' | null | undefined) =>
+  scheme === 'dark' ? darkColors : lightColors;
+
+export const getPaperTheme = (scheme: 'light' | 'dark' | null | undefined) => {
+  const c = getColors(scheme);
+  return {
+    colors: {
+      primary: c.primary,
+      primaryContainer: c.primaryLight,
+      secondary: c.avatarPurple,
+      secondaryContainer: c.memberBadge,
+      surface: c.surface,
+      surfaceVariant: c.surfaceSecondary,
+      background: c.backgroundStart,
+      error: c.error,
+      errorContainer: c.errorLight,
+      onPrimary: c.textOnPrimary,
+      onPrimaryContainer: c.primary,
+      onSecondary: c.textOnPrimary,
+      onSecondaryContainer: c.textPrimary,
+      onSurface: c.textPrimary,
+      onSurfaceVariant: c.textSecondary,
+      onBackground: c.textPrimary,
+      onError: c.textOnPrimary,
+      onErrorContainer: c.error,
+      outline: c.border,
+      outlineVariant: c.borderLight,
+      shadow: '#000',
+      scrim: '#000',
+      inverseSurface: c.textPrimary,
+      inverseOnSurface: c.surface,
+      inversePrimary: c.primaryLight,
+      elevation: {
+        level0: 'transparent',
+        level1: c.surface,
+        level2: c.surface,
+        level3: c.surface,
+        level4: c.surface,
+        level5: c.surface,
+      },
+    },
+    roundness: borderRadius.md,
+  };
 };
 
 // Common component styles
