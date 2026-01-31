@@ -3,70 +3,44 @@ import {
   View,
   StyleSheet,
   Alert,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { signUp } from '../../services/authService';
+import { signIn } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 import { colors, spacing, borderRadius, typography, shadows } from '../../theme';
 
-interface SignUpScreenProps {
-  onNavigateToLogin: () => void;
+interface LoginScreenProps {
+  onNavigateToSignUp: () => void;
+  onNavigateToForgot: () => void;
 }
 
-export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToSignUp, onNavigateToForgot }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
   const setUser = useAuthStore((state) => state.setUser);
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validatePassword = (password: string): boolean => {
-    // At least 8 characters, uppercase, lowercase, and a number
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    return password.length >= 8 && hasUpperCase && hasLowerCase && hasNumber;
-  };
-
-  const handleSignUp = async () => {
-    if (!displayName.trim()) {
-      Alert.alert('Error', 'Please enter your name');
-      return;
-    }
-
+  const handleLogin = async () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter your email');
       return;
     }
 
-    if (!validateEmail(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
-    }
-
-    if (!validatePassword(password)) {
-      Alert.alert('Error', 'Password must be at least 8 characters with uppercase, lowercase, and a number');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+    if (!password) {
+      Alert.alert('Error', 'Please enter your password');
       return;
     }
 
@@ -74,14 +48,17 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
     setError(null);
 
     try {
-      const user = await signUp(email.trim().toLowerCase(), password, displayName.trim());
+      const user = await signIn(email.trim().toLowerCase(), password);
       setUser(user);
-      Alert.alert('Success', 'Account created successfully!');
     } catch (error: any) {
-      setError(error.message || 'Sign Up Failed');
+      setError(error.message || 'Login Failed');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = () => {
+    onNavigateToForgot();
   };
 
   return (
@@ -99,7 +76,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
           {/* Logo Section */}
           <View style={styles.logoSection}>
             <Text style={styles.logo}>TimeHarbor</Text>
-            <Text style={styles.subtitle}>Create an account to get started</Text>
+            <Text style={styles.subtitle}>Sign in to track your time</Text>
           </View>
 
           {/* Form Card */}
@@ -109,27 +86,15 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
-            {/* Full Name Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                value={displayName}
-                onChangeText={setDisplayName}
-                placeholder="John Doe"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="words"
-                editable={!loading}
-              />
-            </View>
-
             {/* Email Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, focusedField === 'email' && styles.inputFocused]}
                 value={email}
                 onChangeText={setEmail}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
                 placeholder="you@example.com"
                 placeholderTextColor={colors.textMuted}
                 keyboardType="email-address"
@@ -142,11 +107,18 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
             {/* Password Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordContainer}>
+              <View
+                style={[
+                  styles.passwordContainer,
+                  focusedField === 'password' && styles.passwordContainerFocused,
+                ]}
+              >
                 <TextInput
                   style={styles.passwordInput}
                   value={password}
                   onChangeText={setPassword}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField(null)}
                   placeholder="••••••••"
                   placeholderTextColor={colors.textMuted}
                   secureTextEntry={!showPassword}
@@ -163,49 +135,46 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
                   />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.helperText}>
-                Must be at least 8 characters with uppercase, lowercase, and a number
-              </Text>
             </View>
 
-            {/* Confirm Password Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Confirm Password</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="••••••••"
-                  placeholderTextColor={colors.textMuted}
-                  secureTextEntry={!showPassword}
-                  editable={!loading}
-                />
-              </View>
-              {confirmPassword.length > 0 && password !== confirmPassword && (
-                <Text style={styles.errorText}>Passwords do not match</Text>
-              )}
+            {/* Remember Me & Forgot Password */}
+            <View style={styles.optionsRow}>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => setRememberMe(!rememberMe)}
+              >
+                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                  {rememberMe && (
+                    <MaterialCommunityIcons name="check" size={14} color={colors.textOnPrimary} />
+                  )}
+                </View>
+                <Text style={styles.checkboxLabel}>Remember me</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={handleForgotPassword}>
+                <Text style={styles.forgotPassword}>Forgot password?</Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Create Account Button */}
+            {/* Sign In Button */}
             <TouchableOpacity
               style={[styles.primaryButton, loading && styles.buttonDisabled]}
-              onPress={handleSignUp}
+              onPress={handleLogin}
               disabled={loading}
               activeOpacity={0.8}
             >
               {loading ? (
                 <ActivityIndicator color={colors.textOnPrimary} size="small" />
               ) : (
-                <Text style={styles.buttonText}>Create Account</Text>
+                <Text style={styles.buttonText}>Sign In</Text>
               )}
             </TouchableOpacity>
 
-            {/* Sign In Link */}
+            {/* Sign Up Link */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account? </Text>
-              <TouchableOpacity onPress={onNavigateToLogin} disabled={loading}>
-                <Text style={styles.linkText}>Sign in</Text>
+              <Text style={styles.footerText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={onNavigateToSignUp} disabled={loading}>
+                <Text style={styles.linkText}>Sign up</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -237,7 +206,7 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xxxl,
   },
   logo: {
     fontSize: typography.sizes.xxxl,
@@ -275,6 +244,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md + 2,
     fontSize: typography.sizes.md,
     color: colors.textPrimary,
+    outlineStyle: 'none',
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -284,26 +254,61 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  passwordContainerFocused: {
+    borderColor: colors.primary,
+    boxShadow: `0 0 0 2px rgba(37, 99, 235, 0.2)`,
+  },
   passwordInput: {
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2,
     fontSize: typography.sizes.md,
     color: colors.textPrimary,
+    outlineStyle: 'none',
+  },
+  inputFocused: {
+    borderColor: colors.primary,
+    outlineColor: colors.primary,
+    outlineWidth: 2,
+    outlineStyle: 'solid',
+    outlineOffset: 0,
   },
   eyeButton: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
-  helperText: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-    marginTop: spacing.sm,
+  optionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
   },
-  errorText: {
-    fontSize: typography.sizes.xs,
-    color: colors.error,
-    marginTop: spacing.sm,
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: borderRadius.sm,
+    borderWidth: 2,
+    borderColor: colors.border,
+    marginRight: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkboxLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  forgotPassword: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
   },
   primaryButton: {
     backgroundColor: colors.primary,
@@ -311,7 +316,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.md,
     marginBottom: spacing.xl,
   },
   buttonDisabled: {

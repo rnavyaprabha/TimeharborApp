@@ -62,6 +62,7 @@ export const TeamsScreen: React.FC = () => {
   const [createdTeamCode, setCreatedTeamCode] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [teamSessions, setTeamSessions] = useState<any[]>([]);
   const [rangePreset, setRangePreset] = useState<'today' | 'yesterday' | 'last7' | 'thisWeek' | 'last14'>('last14');
   const [rangeStart, setRangeStart] = useState<Date | null>(null);
@@ -531,15 +532,19 @@ export const TeamsScreen: React.FC = () => {
             <TextInput
               value={customFrom}
               onChangeText={setCustomFrom}
+              onFocus={() => setFocusedInput('rangeFrom')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="YYYY-MM-DD"
-              style={styles.rangeInput}
+              style={[styles.rangeInput, focusedInput === 'rangeFrom' && styles.inputFocused]}
             />
             <Text style={styles.rangeDivider}>to</Text>
             <TextInput
               value={customTo}
               onChangeText={setCustomTo}
+              onFocus={() => setFocusedInput('rangeTo')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="YYYY-MM-DD"
-              style={styles.rangeInput}
+              style={[styles.rangeInput, focusedInput === 'rangeTo' && styles.inputFocused]}
             />
             <Pressable style={styles.rangeApply} onPress={handleApplyCustomRange}>
               <Text style={styles.rangeApplyText}>Apply</Text>
@@ -560,38 +565,50 @@ export const TeamsScreen: React.FC = () => {
             <TextInput
               value={filters.date}
               onChangeText={(val) => setFilters((prev) => ({ ...prev, date: val }))}
+              onFocus={() => setFocusedInput('filterDate')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="Filter Date"
-              style={[styles.filterInput, styles.colDate]}
+              style={[styles.filterInput, styles.colDate, focusedInput === 'filterDate' && styles.inputFocused]}
             />
             <TextInput
               value={filters.member}
               onChangeText={(val) => setFilters((prev) => ({ ...prev, member: val }))}
+              onFocus={() => setFocusedInput('filterMember')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="Filter Member"
-              style={[styles.filterInput, styles.colMember]}
+              style={[styles.filterInput, styles.colMember, focusedInput === 'filterMember' && styles.inputFocused]}
             />
             <TextInput
               value={filters.email}
               onChangeText={(val) => setFilters((prev) => ({ ...prev, email: val }))}
+              onFocus={() => setFocusedInput('filterEmail')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="Filter Email"
-              style={[styles.filterInput, styles.colEmail]}
+              style={[styles.filterInput, styles.colEmail, focusedInput === 'filterEmail' && styles.inputFocused]}
             />
             <TextInput
               value={filters.hours}
               onChangeText={(val) => setFilters((prev) => ({ ...prev, hours: val }))}
+              onFocus={() => setFocusedInput('filterHours')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="Filter Hours"
-              style={[styles.filterInput, styles.colHours]}
+              style={[styles.filterInput, styles.colHours, focusedInput === 'filterHours' && styles.inputFocused]}
             />
             <TextInput
               value={filters.clockIn}
               onChangeText={(val) => setFilters((prev) => ({ ...prev, clockIn: val }))}
+              onFocus={() => setFocusedInput('filterClockIn')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="Filter In"
-              style={[styles.filterInput, styles.colClockIn]}
+              style={[styles.filterInput, styles.colClockIn, focusedInput === 'filterClockIn' && styles.inputFocused]}
             />
             <TextInput
               value={filters.clockOut}
               onChangeText={(val) => setFilters((prev) => ({ ...prev, clockOut: val }))}
+              onFocus={() => setFocusedInput('filterClockOut')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="Filter Out"
-              style={[styles.filterInput, styles.colClockOut]}
+              style={[styles.filterInput, styles.colClockOut, focusedInput === 'filterClockOut' && styles.inputFocused]}
             />
             <View style={[styles.filterSelectWrap, styles.colStatus]}>
               {/* @ts-ignore - web select */}
@@ -618,8 +635,10 @@ export const TeamsScreen: React.FC = () => {
             <TextInput
               value={filters.ticket}
               onChangeText={(val) => setFilters((prev) => ({ ...prev, ticket: val }))}
+              onFocus={() => setFocusedInput('filterTickets')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="Filter Tickets"
-              style={[styles.filterInput, styles.colTickets]}
+              style={[styles.filterInput, styles.colTickets, focusedInput === 'filterTickets' && styles.inputFocused]}
             />
             <View style={styles.colActions} />
           </View>
@@ -661,9 +680,11 @@ export const TeamsScreen: React.FC = () => {
           <TextInput
             value={joinCode}
             onChangeText={(val) => setJoinCode(val.toUpperCase())}
+            onFocus={() => setFocusedInput('joinCode')}
+            onBlur={() => setFocusedInput(null)}
             placeholder="e.g. 123456"
             maxLength={6}
-            style={styles.modalInput}
+            style={[styles.modalInput, focusedInput === 'joinCode' && styles.inputFocused]}
           />
           <View style={styles.modalActions}>
             <Pressable style={styles.modalCancel} onPress={() => setJoinOpen(false)}>
@@ -689,8 +710,10 @@ export const TeamsScreen: React.FC = () => {
             <TextInput
               value={newTeamName}
               onChangeText={setNewTeamName}
+              onFocus={() => setFocusedInput('teamName')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="e.g. Engineering Team"
-              style={styles.modalInput}
+              style={[styles.modalInput, focusedInput === 'teamName' && styles.inputFocused]}
             />
             <View style={styles.modalActions}>
               <Pressable style={styles.modalCancel} onPress={() => setCreateOpen(false)}>
@@ -732,8 +755,10 @@ export const TeamsScreen: React.FC = () => {
           <TextInput
             value={editTeamName}
             onChangeText={setEditTeamName}
+            onFocus={() => setFocusedInput('editTeamName')}
+            onBlur={() => setFocusedInput(null)}
             placeholder="Team name"
-            style={styles.modalInput}
+            style={[styles.modalInput, focusedInput === 'editTeamName' && styles.inputFocused]}
           />
           <View style={styles.modalActions}>
             <Pressable style={styles.modalCancel} onPress={() => setEditOpen(false)}>
@@ -774,8 +799,10 @@ export const TeamsScreen: React.FC = () => {
           <TextInput
             value={newMemberEmail}
             onChangeText={setNewMemberEmail}
+            onFocus={() => setFocusedInput('memberEmail')}
+            onBlur={() => setFocusedInput(null)}
             placeholder="colleague@example.com"
-            style={styles.modalInput}
+            style={[styles.modalInput, focusedInput === 'memberEmail' && styles.inputFocused]}
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -830,7 +857,7 @@ export const TeamsScreen: React.FC = () => {
           )}
           <View style={styles.editField}>
             <Text style={styles.editLabel}>Date</Text>
-            <View style={styles.editInputWrap}>
+            <View style={[styles.editInputWrap, focusedInput === 'editDate' && styles.inputFocused]}>
               {Platform.OS === 'web' ? (
                 <>
                   {/* eslint-disable-next-line react/no-unknown-property */}
@@ -839,6 +866,8 @@ export const TeamsScreen: React.FC = () => {
                     type="date"
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
+                    onFocus={() => setFocusedInput('editDate')}
+                    onBlur={() => setFocusedInput(null)}
                     style={styles.editHtmlInput as any}
                   />
                 </>
@@ -847,6 +876,8 @@ export const TeamsScreen: React.FC = () => {
                   <TextInput
                     value={editDate}
                     onChangeText={setEditDate}
+                    onFocus={() => setFocusedInput('editDate')}
+                    onBlur={() => setFocusedInput(null)}
                     placeholder="YYYY-MM-DD"
                     style={styles.editTextInput}
                   />
@@ -858,7 +889,7 @@ export const TeamsScreen: React.FC = () => {
           <View style={styles.editRow}>
             <View style={styles.editField}>
               <Text style={styles.editLabel}>Clock In</Text>
-              <View style={styles.editInputWrap}>
+              <View style={[styles.editInputWrap, focusedInput === 'editClockIn' && styles.inputFocused]}>
                 {Platform.OS === 'web' ? (
                   <>
                     {/* eslint-disable-next-line react/no-unknown-property */}
@@ -867,6 +898,8 @@ export const TeamsScreen: React.FC = () => {
                       type="time"
                       value={editClockIn}
                       onChange={(e) => setEditClockIn(e.target.value)}
+                      onFocus={() => setFocusedInput('editClockIn')}
+                      onBlur={() => setFocusedInput(null)}
                       style={styles.editHtmlInput as any}
                     />
                   </>
@@ -875,6 +908,8 @@ export const TeamsScreen: React.FC = () => {
                     <TextInput
                       value={editClockIn}
                       onChangeText={setEditClockIn}
+                      onFocus={() => setFocusedInput('editClockIn')}
+                      onBlur={() => setFocusedInput(null)}
                       placeholder="09:00"
                       style={styles.editTextInput}
                     />
@@ -885,7 +920,7 @@ export const TeamsScreen: React.FC = () => {
             </View>
             <View style={styles.editField}>
               <Text style={styles.editLabel}>Clock Out</Text>
-              <View style={styles.editInputWrap}>
+              <View style={[styles.editInputWrap, focusedInput === 'editClockOut' && styles.inputFocused]}>
                 {Platform.OS === 'web' ? (
                   <>
                     {/* eslint-disable-next-line react/no-unknown-property */}
@@ -894,6 +929,8 @@ export const TeamsScreen: React.FC = () => {
                       type="time"
                       value={editClockOut}
                       onChange={(e) => setEditClockOut(e.target.value)}
+                      onFocus={() => setFocusedInput('editClockOut')}
+                      onBlur={() => setFocusedInput(null)}
                       style={styles.editHtmlInput as any}
                     />
                   </>
@@ -902,6 +939,8 @@ export const TeamsScreen: React.FC = () => {
                     <TextInput
                       value={editClockOut}
                       onChangeText={setEditClockOut}
+                      onFocus={() => setFocusedInput('editClockOut')}
+                      onBlur={() => setFocusedInput(null)}
                       placeholder="05:30"
                       style={styles.editTextInput}
                     />
@@ -1233,6 +1272,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     backgroundColor: colors.surface,
     minWidth: 140,
+    outlineStyle: 'none',
   },
   rangeDivider: {
     fontSize: typography.sizes.sm,
@@ -1312,6 +1352,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
+    outlineStyle: 'none',
   },
   filterSelectWrap: {
     justifyContent: 'center',
@@ -1453,6 +1494,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     fontSize: typography.sizes.md,
     color: colors.textPrimary,
+    outlineStyle: 'none',
   },
   editHtmlInput: {
     flex: 1,
@@ -1476,6 +1518,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     color: colors.textPrimary,
+    outlineStyle: 'none',
+  },
+  inputFocused: {
+    borderColor: colors.primary,
+    outlineColor: colors.primary,
+    outlineWidth: 2,
+    outlineStyle: 'solid',
+    outlineOffset: 0,
   },
   modalActions: {
     flexDirection: 'row',

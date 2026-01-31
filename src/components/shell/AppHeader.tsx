@@ -26,6 +26,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const navItems = [
     { key: 'Home', label: 'Home', icon: 'home-outline' as const, iconActive: 'home' as const },
     { key: 'Teams', label: 'Teams', icon: 'account-group-outline' as const, iconActive: 'account-group' as const },
+    { key: 'Insights', label: 'Insights', icon: 'chart-box-outline' as const, iconActive: 'chart-box' as const },
     { key: 'Tickets', label: 'Tickets', icon: 'ticket-outline' as const, iconActive: 'ticket' as const },
     { key: 'Settings', label: 'Settings', icon: 'cog-outline' as const, iconActive: 'cog' as const },
   ];

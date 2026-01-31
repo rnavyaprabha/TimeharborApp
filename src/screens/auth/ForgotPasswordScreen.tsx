@@ -23,6 +23,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onBa
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [focused, setFocused] = useState(false);
 
   const handleSubmit = async () => {
     if (!email.trim()) return;
@@ -82,9 +83,11 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onBa
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Email Address</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, focused && styles.inputFocused]}
                     value={email}
                     onChangeText={setEmail}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
                     placeholder="you@example.com"
                     placeholderTextColor={colors.textMuted}
                     keyboardType="email-address"
@@ -185,6 +188,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md + 2,
     fontSize: typography.sizes.md,
     color: colors.textPrimary,
+    outlineStyle: 'none',
+  },
+  inputFocused: {
+    borderColor: colors.primary,
+    outlineColor: colors.primary,
+    outlineWidth: 2,
+    outlineStyle: 'solid',
+    outlineOffset: 0,
   },
   helperText: {
     fontSize: typography.sizes.xs,
