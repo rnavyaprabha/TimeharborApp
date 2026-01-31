@@ -55,8 +55,10 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({ openAdd, onAddOpen
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [commentOpen, setCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [commentFocused, setCommentFocused] = useState(false);
   const [pendingTicket, setPendingTicket] = useState<Ticket | null>(null);
   const [commentMode, setCommentMode] = useState<'stop' | 'switch'>('stop');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [editing, setEditing] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [focusedField, setFocusedField] = useState<
@@ -98,6 +100,7 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({ openAdd, onAddOpen
     };
     load();
   }, [activeTeamId, user, activeSession, setActiveSession]);
+
 
   useEffect(() => {
     if (openAdd) {
@@ -268,25 +271,34 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({ openAdd, onAddOpen
       </View>
 
       <View style={styles.filterCard}>
-        <View style={styles.tabs}>
-          {(['All', 'Open', 'In Progress', 'Closed'] as const).map((tab) => (
-            <Pressable
-              key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+        <View style={styles.filterHeader}>
+          <View style={styles.tabs}>
+            {(['All', 'Open', 'In Progress', 'Closed'] as const).map((tab) => (
+              <Pressable
+                key={tab}
+                style={[styles.tab, activeTab === tab && styles.tabActive]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.searchGroup}>
+            <View style={[styles.searchRow, searchFocused && styles.searchRowFocused]}>
+              <MaterialCommunityIcons name="magnify" size={16} color={colors.textMuted} style={styles.searchIcon} />
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                placeholder="Search tickets..."
+                style={styles.searchInput}
+              />
+            </View>
+            <Pressable style={styles.filterButton}>
+              <MaterialCommunityIcons name="filter-variant" size={16} color={colors.textMuted} />
             </Pressable>
-          ))}
-        </View>
-        <View style={styles.searchRow}>
-          <MaterialCommunityIcons name="magnify" size={16} color={colors.textMuted} />
-          <TextInput
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search tickets..."
-            style={styles.searchInput}
-          />
+          </View>
         </View>
       </View>
 
@@ -782,14 +794,17 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({ openAdd, onAddOpen
         <View style={styles.modalBody}>
           <Text style={styles.modalHelp}>
             {commentMode === 'stop'
-              ? 'Enter a comment for this session:'
-              : 'Enter a comment for the current task before switching:'}
+              ? 'Are you sure you want to stop working on this ticket?'
+              : 'You are currently working on another ticket. Do you want to switch?'}
           </Text>
+          <Text style={styles.modalLabel}>Work Description (Optional)</Text>
           <TextInput
             value={commentText}
             onChangeText={setCommentText}
             placeholder="What did you work on?"
-            style={[styles.modalInput, styles.modalTextarea]}
+            onFocus={() => setCommentFocused(true)}
+            onBlur={() => setCommentFocused(false)}
+            style={[styles.modalInput, commentFocused && styles.modalInputFocused, styles.modalTextarea]}
             multiline
           />
           <View style={styles.modalActions}>
@@ -797,7 +812,7 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({ openAdd, onAddOpen
               <Text style={styles.modalCancelText}>Cancel</Text>
             </Pressable>
             <Pressable
-              style={[styles.modalPrimary, commentMode === 'stop' && styles.modalDanger]}
+              style={styles.modalPrimary}
               onPress={handleConfirmComment}
             >
               <Text style={styles.modalPrimaryText}>
@@ -879,10 +894,17 @@ const styles = StyleSheet.create({
     ...shadows.sm,
     marginBottom: spacing.lg,
   },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.lg,
+    flexWrap: 'wrap',
+  },
   tabs: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.md,
   },
   tab: {
     paddingHorizontal: spacing.md,
@@ -902,18 +924,49 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     fontFamily: typography.fonts.semibold,
   },
-  searchRow: {
+  searchGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  searchRow: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surfaceSecondary,
     borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingHorizontal: spacing.md,
+    minWidth: 260,
+    maxWidth: 340,
+    height: 40,
+  },
+  searchRowFocused: {
+    borderColor: colors.primary,
+    boxShadow: `0 0 0 2px rgba(37, 99, 235, 0.2)`,
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: 10,
   },
   searchInput: {
     flex: 1,
     paddingVertical: spacing.sm,
+    paddingLeft: 20,
     color: colors.textPrimary,
+    backgroundColor: 'transparent',
+    outlineStyle: 'none',
+  },
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listCard: {
     backgroundColor: colors.surface,
@@ -1037,6 +1090,29 @@ const styles = StyleSheet.create({
   },
   modalHelp: {
     color: colors.textSecondary,
+  },
+  modalLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.medium,
+    fontFamily: typography.fonts.medium,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+    outlineStyle: 'none',
+  },
+  modalInputFocused: {
+    borderColor: colors.primary,
+    outlineColor: colors.primary,
+    outlineWidth: 2,
+    outlineStyle: 'solid',
+    outlineOffset: 0,
   },
   fieldGroup: {
     gap: spacing.xs,

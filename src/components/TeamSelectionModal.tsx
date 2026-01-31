@@ -44,6 +44,7 @@ export const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loadingJoin, setLoadingJoin] = useState(false);
   const [loadingCreate, setLoadingCreate] = useState(false);
+  const [focusedField, setFocusedField] = useState<'join' | 'create' | null>(null);
 
   const sortedTeams = useMemo(() => {
     const items = [...teams];
@@ -211,10 +212,12 @@ export const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
               setJoinCode(val.toUpperCase());
               setError(null);
             }}
+            onFocus={() => setFocusedField('join')}
+            onBlur={() => setFocusedField(null)}
             placeholder="e.g. 123456"
             maxLength={6}
             autoCapitalize="characters"
-            style={styles.codeInput}
+            style={[styles.codeInput, focusedField === 'join' && styles.inputFocused]}
           />
           <View style={styles.modalActions}>
             <Pressable style={styles.modalCancel} onPress={() => setJoinOpen(false)}>
@@ -254,8 +257,10 @@ export const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
             <TextInput
               value={newTeamName}
               onChangeText={setNewTeamName}
+              onFocus={() => setFocusedField('create')}
+              onBlur={() => setFocusedField(null)}
               placeholder="e.g. Engineering Team"
-              style={styles.textInput}
+              style={[styles.textInput, focusedField === 'create' && styles.inputFocused]}
             />
             <View style={styles.modalActions}>
               <Pressable style={styles.modalCancel} onPress={() => setCreateOpen(false)}>
@@ -494,6 +499,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
+    outlineStyle: 'none',
   },
   codeInput: {
     borderWidth: 1,
@@ -505,6 +511,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 4,
     fontWeight: typography.weights.semibold,
+    outlineStyle: 'none',
+  },
+  inputFocused: {
+    borderColor: colors.primary,
+    outlineColor: colors.primary,
+    outlineWidth: 2,
+    outlineStyle: 'solid',
+    outlineOffset: 0,
   },
   errorText: {
     backgroundColor: colors.errorLight,

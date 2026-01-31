@@ -8,11 +8,13 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './src/config/firebase';
 import { useAuthStore } from './src/store/authStore';
 import { convertFirebaseUser, logout } from './src/services/authService';
+import { registerForPushNotifications } from './src/services/notificationService';
 import { LoginScreen } from './src/screens/auth/LoginScreen';
 import { SignUpScreen } from './src/screens/auth/SignUpScreen';
 import { ForgotPasswordScreen } from './src/screens/auth/ForgotPasswordScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { TicketsScreen } from './src/screens/TicketsScreen';
+import { InsightsScreen } from './src/screens/InsightsScreen';
 import { TeamsScreen } from './src/screens/TeamsScreen';
 import { CreateTeamScreen } from './src/screens/CreateTeamScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
@@ -220,6 +222,9 @@ function MainApp() {
             <Tab.Screen name="Teams">
               {() => <TeamsScreen key={refreshTeamsKey} />}
             </Tab.Screen>
+            <Tab.Screen name="Insights">
+              {() => <InsightsScreen />}
+            </Tab.Screen>
             <Tab.Screen name="Tickets">
               {() => (
                 <TicketsScreen
@@ -292,6 +297,13 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    registerForPushNotifications(user.uid).catch((error) => {
+      console.error('Push notification registration failed', error);
+    });
+  }, [user?.uid]);
 
   if (isLoading || !fontsLoaded) {
     return (

@@ -230,15 +230,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     if (!user) return;
 
     try {
-      if (!activeSession) {
-        const message = 'Clock in first to start tracking a ticket.';
-        if (Platform.OS === 'web') {
-          window.alert(message);
-        } else {
-          Alert.alert('Clock in required', message);
-        }
-        return;
-      }
       if (activeSession) {
         // If same ticket is active -> stop tracking that ticket
         if (activeTicketId === ticket.id) {
@@ -345,7 +336,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               tickets={tickets}
               activeTicketId={activeTicketId}
               activeTicketElapsedSeconds={activeTicketElapsedSeconds}
-              trackingEnabled={!!activeSession}
               onStartTicket={handleStartTicket}
               onStopTicket={handleStartTicket}
               onAddTicket={onOpenAddTicket}

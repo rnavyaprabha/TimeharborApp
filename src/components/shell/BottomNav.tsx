@@ -75,6 +75,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <Text style={[styles.tabLabel, activeTab === 'Teams' && styles.tabLabelActive]}>Teams</Text>
       </Pressable>
 
+      <Pressable style={styles.tab} onPress={() => onTabChange('Insights')}>
+        <MaterialCommunityIcons
+          name="chart-box"
+          size={22}
+          color={activeTab === 'Insights' ? colors.primary : colors.textMuted}
+        />
+        <Text style={[styles.tabLabel, activeTab === 'Insights' && styles.tabLabelActive]}>Insights</Text>
+      </Pressable>
+
       <View style={styles.centerSlot}>
         <View style={styles.clockWrap}>
         {isSessionActive && (

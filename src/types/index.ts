@@ -6,6 +6,8 @@ export interface User {
   role?: string;
   teamIds?: string[];
   fcmToken?: string;
+  expoPushToken?: string;
+  apnsToken?: string;
   createdAt: Date;
 }
 
