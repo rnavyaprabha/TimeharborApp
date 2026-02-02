@@ -14,16 +14,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mieweb.timeharbor"
+      "bundleIdentifier": "com.mieweb.timeharbor",
+      "googleServicesFile": "./config/GoogleService-Info.plist"
     },
     "android": {
+      "googleServicesFile": "./config/google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.navyaprabha.TimeHarbor"
+      "package": "com.mieweb.timeharbor"
     },
     "web": {
       "favicon": "./assets/favicon.png"

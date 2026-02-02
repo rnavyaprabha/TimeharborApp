@@ -27,6 +27,11 @@ import { getUserTeams } from './src/services/teamService';
 import { useTeamUiStore } from './src/store/teamUiStore';
 import { useSessionStore } from './src/store/sessionStore';
 import {
+  registerForPushNotificationsAsync,
+  registerNotificationListeners,
+  upsertUserPushToken,
+} from './src/services/notificationService';
+import {
   Geist_400Regular,
   Geist_500Medium,
   Geist_600SemiBold,
@@ -296,6 +301,25 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const cleanup = registerNotificationListeners();
+    return cleanup;
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    let isActive = true;
+    const syncToken = async () => {
+      const token = await registerForPushNotificationsAsync();
+      if (!token || !isActive) return;
+      await upsertUserPushToken(user.uid, token);
+    };
+    syncToken();
+    return () => {
+      isActive = false;
+    };
+  }, [user?.uid]);
 
 
   if (isLoading || !fontsLoaded) {
