@@ -8,7 +8,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './src/config/firebase';
 import { useAuthStore } from './src/store/authStore';
 import { convertFirebaseUser, logout } from './src/services/authService';
-import { registerForPushNotifications } from './src/services/notificationService';
 import { LoginScreen } from './src/screens/auth/LoginScreen';
 import { SignUpScreen } from './src/screens/auth/SignUpScreen';
 import { ForgotPasswordScreen } from './src/screens/auth/ForgotPasswordScreen';
@@ -298,12 +297,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (!user?.uid) return;
-    registerForPushNotifications(user.uid).catch((error) => {
-      console.error('Push notification registration failed', error);
-    });
-  }, [user?.uid]);
 
   if (isLoading || !fontsLoaded) {
     return (
