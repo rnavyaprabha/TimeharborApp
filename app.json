@@ -13,7 +13,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mieweb.timeharbor"
     },
     "android": {
       "adaptiveIcon": {
@@ -31,6 +32,9 @@
       "eas": {
         "projectId": "0c12c7a5-45f8-4608-8387-ac23bc6a4540"
       }
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
