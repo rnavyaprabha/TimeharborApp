@@ -18,7 +18,6 @@
     "expo-dev-client": "~6.0.20",
     "expo-font": "~12.0.10",
     "expo-linking": "~55.0.3",
-    "expo-notifications": "~0.32.16",
     "expo-status-bar": "~3.0.9",
     "firebase": "^12.8.0",
     "react": "19.1.0",
