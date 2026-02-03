@@ -14,11 +14,9 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mieweb.timeharbor",
-      "googleServicesFile": "./config/GoogleService-Info.plist"
+      "bundleIdentifier": "com.mieweb.timeharbor"
     },
     "android": {
-      "googleServicesFile": "./config/google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
