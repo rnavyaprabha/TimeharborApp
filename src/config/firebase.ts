@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCf_xfKqYeFB4Zl82xG-BviZ58nqZEsYyc",
-  authDomain: "timeharborapp.firebaseapp.com",
-  projectId: "timeharborapp",
-  storageBucket: "timeharborapp.firebasestorage.app",
-  messagingSenderId: "339582251988",
-  appId: "1:339582251988:web:e3aecac5e7be77aabb5c41",
-  measurementId: "G-FFCRVLNRMJ"
+  apiKey: "AIzaSyBOqOqj5fNzVoj7molX4SamBliwr-Uc__8",
+  authDomain: "timeharbor-e8ff4.firebaseapp.com",
+  projectId: "timeharbor-e8ff4",
+  storageBucket: "timeharbor-e8ff4.firebasestorage.app",
+  messagingSenderId: "991518210130",
+  appId: "1:991518210130:web:d1518c97b52953e94bc78b",
+  measurementId: "G-LVXHYFJ3YE"
 };
 
 // Initialize Firebase
